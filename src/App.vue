@@ -22,18 +22,22 @@ export default {
   },
   computed: {
     displayVouchers() {
-      return this.vouchers.map((voucher) => voucher.Name).join(", ");
+      return this.vouchers.map((voucher) => voucher.Name).join(', ');
     },
   },
   async mounted() {
     try {
-      const userResponse = await window.ZOHO.CRM.API.searchRecord({Entity:"Contacts",Type:"criteria",Query:`JT_Membership_No:equals:${this.$props.id}`})
+      const userResponse = await window.ZOHO.CRM.API.searchRecord({
+        Entity:'Contacts',
+        Type:'criteria',
+        Query:`JT_Membership_No:equals:${this.$props.id}`,
+      })
       if (userResponse?.data) {
         this.user = userResponse.data[0]
       }
       const voucherResponse = await window.ZOHO.CRM.API.searchRecord({
-        Entity: "Voucher",
-        Type: "criteria",
+        Entity: 'Voucher',
+        Type: 'criteria',
         Query: `Contact_Name:equals:${this.user.Full_Name}`,
       });
       if (userResponse?.data) {
