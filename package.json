@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "buefy": "npm:@ntohq/buefy-next@^0.1.4",
+    "pinia": "^2.2.4",
     "vue": "^3.2.38"
   },
   "devDependencies": {

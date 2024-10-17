@@ -31,14 +31,23 @@
         </div>
         <div class="columns">
           <div class="column is-one-fifth has-text-right">
-            Vouchers:
+            Privileges:
           </div>
-          <div class="column card-container">
-            <VoucherCard
-              v-for="(voucher, index) in vouchers"
+          <div
+            v-if="privileges.length > 0"
+            class="column card-container"
+          >
+            <PrivilegeCard
+              v-for="(privilege, index) in privileges"
               :key="index"
-              :voucher="voucher"
+              :privilege="privilege"
             />
+          </div>
+          <div
+            class="no-privileges"
+            v-else
+          >
+            <p>No available privilege.</p>
           </div>
         </div>
       </div>
@@ -47,10 +56,10 @@
 </template>
 
 <script>
-import VoucherCard from './units/VoucherCard.vue'
+import PrivilegeCard from './units/PrivilegeCard.vue'
 export default {
   components: {
-    VoucherCard,
+    PrivilegeCard,
   },
   props: {
     memberNo: {
@@ -65,7 +74,7 @@ export default {
       type: String,
       default: '',
     },
-    vouchers: {
+    privileges: {
       type: Array,
       default: () => [],
     },
@@ -92,5 +101,17 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.no-privileges {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #dddddd;
+  margin: 4px;
 }
 </style>
