@@ -56,7 +56,6 @@ export default {
     const loading = useLoadingStore()
     const memberStore = useMemberStore()
     const userStore = useUserStore()
-    const privilegeStore = usePrivilegeStore()
     try {
       loading.setLoading(true)
       const responseUser = await window.ZOHO.CRM.CONFIG.getCurrentUser()
@@ -86,6 +85,7 @@ export default {
     },
     async fetchData() {
       const privilegeStore = usePrivilegeStore()
+      const today = new Date()
       const privileges = await window.ZOHO.CRM.API.searchRecord({
         Entity: 'Standard_Privilege',
         Type: 'criteria',
@@ -94,19 +94,26 @@ export default {
       if (privileges?.data) {
         const voucher = await this.getInvolveVoucher()
         const usedPrivilegeId = voucher?.Standard_Privilege?.id
-        const privilegeMaps = privileges?.data.map(p => {
-          if (usedPrivilegeId === p.id) {
+        const privilegeMaps = privileges?.data
+          .filter(privilege => {
+            const startDate = new Date(privilege.Start_Date)
+            const endDate = new Date(privilege.End_Date)
+            console.log({startDate, endDate })
+            return startDate <= today && today <= endDate
+          })
+          .map(p => {
+            if (usedPrivilegeId === p.id) {
+              return {
+                ...p,
+                isUsed: true,
+                voucher: voucher
+              }
+            }
             return {
               ...p,
-              isUsed: true,
-              voucher: voucher
+              isUsed: false,
             }
-          }
-          return {
-            ...p,
-            isUsed: false,
-          }
-        })
+          })
         console.log('privilegeMaps', privilegeMaps)
         const isSomeUsed = privilegeMaps.some(p => p.isUsed)
         if (isSomeUsed) {
