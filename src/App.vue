@@ -5,16 +5,16 @@
 <template>
   <div class="container">
     <Loading v-if="isLoading" />
-    <span class="is-size-5 mb-3 is-clickable" @click="goBack">&lt; <span class="is-underlined">Back</span></span>
+    <span class="is-size-5 mb-3 is-clickable mr-auto" @click="goBack">&lt; <span class="is-underlined">Back</span></span>
     <MembershipDetailCard
-      v-if="user && !loading"
+      v-if="user && !isLoading"
       :name="user?.Full_Name"
       :member-no="user?.JT_Membership_No"
       :tier="user?.Current_Tier"
     />
     <div
       class="no-member"
-      v-else-if="!user && !loading"
+      v-else-if="!user && !isLoading"
     >
       No Member found
     </div>
@@ -60,17 +60,17 @@ export default {
       loading.setLoading(true)
       const responseUser = await window.ZOHO.CRM.CONFIG.getCurrentUser()
       if (responseUser?.users[0]) {
-        userStore.setData(responseUser?.users[0])
+        const user = await window.ZOHO.CRM.API.getUser({ ID: responseUser?.users[0].id })
+        userStore.setData(user?.users[0])
       }
       const userResponse = await window.ZOHO.CRM.API.searchRecord({
         Entity:'Contacts',
         Type:'criteria',
-        Query:`JT_Membership_No:equals:${this.$props.id}`,
+        Query:`Id:equals:${this.$props.id}`,
       })
       if (userResponse?.data) {
         this.user = userResponse.data[0]
         memberStore.setData(userResponse.data[0])
-        console.log(this.user)
       }
       await this.fetchData()
       loading.setLoading(false)
@@ -97,8 +97,7 @@ export default {
         const privilegeMaps = privileges?.data
           .filter(privilege => {
             const startDate = new Date(privilege.Start_Date)
-            const endDate = new Date(privilege.End_Date)
-            console.log({startDate, endDate })
+            const endDate = new Date(privilege.End_Date).setHours(23, 59, 59, 999)
             return startDate <= today && today <= endDate
           })
           .map(p => {
@@ -114,7 +113,6 @@ export default {
               isUsed: false,
             }
           })
-        console.log('privilegeMaps', privilegeMaps)
         const isSomeUsed = privilegeMaps.some(p => p.isUsed)
         if (isSomeUsed) {
           this.isSomeUsed = isSomeUsed

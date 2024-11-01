@@ -95,7 +95,7 @@ export default {
       return this.privilege.Terms_Conditions.replace(/\n/g, '<br>')
     },
     previewImage() {
-      return `https://crmsandbox.zoho.com/crm/aqmb/EntityImageAttach.do?action_module=CustomModule17&entityId=${this.privilege.id}&actionName=readImage&fileId=${this.privilege.Record_Image}`
+      return `${import.meta.env.VITE_IMAGE_BASE_URL}/EntityImageAttach.do?action_module=CustomModule17&entityId=${this.privilege.id}&actionName=readImage&fileId=${this.privilege.Record_Image}`
     }
   },
   methods: {
@@ -141,23 +141,27 @@ export default {
       const privilegeStore = usePrivilegeStore()
       try {
         loading.setLoading(true)
+        const storeName = userStore.data?.User_Store1 || userStore.data?.User_Store
         const responseStore = await window.ZOHO.CRM.API.searchRecord({
           Entity: 'Vendors',
           Type: 'criteria',
-          Query: `Store_User:equals:${userStore.data?.full_name}`
+          Query: `Vendor_Name:equals:${storeName}`
         })
-        if (responseStore?.data) {
+        if (Array.isArray(responseStore?.data)) {
           const store = responseStore?.data[0]
           const responseVoucher = await window.ZOHO.CRM.API.insertRecord({
             Entity: 'Voucher',
             APIData: {
               Contact_Name: memberStore.data.id,
-              Name: this.privilege.Name,
+              Privilege_Sub_Title: memberStore.data.id,
+              Name: `${this.privilege.Name}`,
               Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
               Used_Store: store.id,
               Marked_Used_By: userStore.data?.full_name,
               Voucher_Status: 'Used',
-              Standard_Privilege: this.privilege.id
+              Voucher_Code: this.privilege.Voucher_Code,
+              Standard_Privilege: this.privilege.id,
+              Generate_From: import.meta.env.VITE_CAMPAIGN_NAME,
             }
           })
           if (responseVoucher?.data[0]?.code === 'SUCCESS') {
@@ -179,6 +183,13 @@ export default {
                 }
               })
           }
+        }
+        else {
+          this.$buefy.snackbar.open({
+          message: 'This user is not permitted to perform action as User is not assigned to any Store. Please contact Admin.',
+          position: 'is-top',
+          type: 'is-warning',
+        })
         }
         loading.setLoading(false)
       }

@@ -71,8 +71,8 @@ export default {
   },
   data() {
     return {
-      startDate: new Date('2024-11-1'),
-      endDate: new Date('2024-11-30'),
+      startDate: new Date(import.meta.env.VITE_START_DATE),
+      endDate: new Date(import.meta.env.VITE_END_DATE),
     }
   },
   computed: {

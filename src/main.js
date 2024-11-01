@@ -11,7 +11,8 @@ if (import.meta.env.DEV) {
   createApp(App).use(Buefy).use(pinia).mount('#app');
 } else {
   window.ZOHO.embeddedApp.on('PageLoad', function (data) {
-    createApp(App, { id: data }).use(Buefy).use(pinia).mount('#app');
+    console.log('data', data)
+    createApp(App, { id: data?.entityId }).use(Buefy).use(pinia).mount('#app');
   });
   window.ZOHO.embeddedApp.init();
 }
