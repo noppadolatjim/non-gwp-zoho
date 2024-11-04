@@ -139,7 +139,7 @@ export default {
       const responseVoucher = await window.ZOHO.CRM.API.searchRecord({
         Entity: 'Voucher',
         Type: 'criteria',
-        Query: `((Name:starts_with:Gift Set)(Contact_Name:equals:${memberStore.data.id})and(Voucher_Status:equals:Used))`
+        Query: `((Name:starts_with:Gift Set)and(Contact_Name:equals:${memberStore.data.id})and(Voucher_Status:equals:Used))`
       })
       
       if (Array.isArray(responseVoucher?.data)) {

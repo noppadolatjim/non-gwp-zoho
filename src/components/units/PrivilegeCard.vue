@@ -158,7 +158,6 @@ export default {
               Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
               Used_Store: store.id,
               Marked_Used_By: userStore.data?.full_name,
-              Voucher_Status: 'Redeem',
               Type_of_Privilege: 'Gift',
               Sub_Type: 'Special Gift',
               Voucher_Code: this.privilege.Voucher_Code,
