@@ -158,7 +158,6 @@ export default {
               Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
               Used_Store: store.id,
               Marked_Used_By: userStore.data?.full_name,
-              Voucher_Status: 'Used',
               Type_of_Privilege: 'Gift',
               Sub_Type: 'Special Gift',
               Voucher_Code: this.privilege.Voucher_Code,
@@ -167,6 +166,18 @@ export default {
             }
           })
           if (responseVoucher?.data[0]?.code === 'SUCCESS') {
+            sessionStorage.setItem('latest-mark-use-member', JSON.stringify({
+              Standard_Privilege: {
+                id: this.privilege.id,
+              },
+              memberId: memberStore.data.id,
+              Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
+              Marked_Used_By: userStore.data?.full_name,
+              Voucher_Status: 'Used',
+              Used_Store: {
+                name: store?.Store_Name,
+              },
+            }))
             privilegeStore.setUsedPrivilegeLocal(this.privilege.id, {
               Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
               Marked_Used_By: userStore.data?.full_name,

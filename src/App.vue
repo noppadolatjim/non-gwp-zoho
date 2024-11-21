@@ -136,6 +136,13 @@ export default {
     },
     async getInvolveVoucher() {
       const memberStore = useMemberStore()
+      const tempMarkUsedString = sessionStorage.getItem('latest-mark-use-member')
+      if (tempMarkUsedString) {
+        const tempMarkUsedJson = JSON.parse(tempMarkUsedString)
+        if (tempMarkUsedJson.memberId === memberStore.data.id) {
+          return tempMarkUsedJson
+        }
+      }
       const responseVoucher = await window.ZOHO.CRM.API.searchRecord({
         Entity: 'Voucher',
         Type: 'criteria',
