@@ -1,5 +1,5 @@
 <template>
-  <div class="wrapper" :class="{ 'is-highlight': isHighlight }">
+  <div class="wrapper mb-4" :class="{ 'is-highlight': isHighlight }">
     <div class="flex-row">
       <div class="img-wrapper">
         <img
@@ -35,21 +35,27 @@
         <p class="card-header-title is-justify-content-center">Confirm to Mark Use ?</p>
       </div>
       <div class="card-content">
-        <div class="content has-text-centered">
+        <div class="content has-text-centered is-flex is-flex-direction-column">
           <span class="has-text-weight-bold">ยืนยันการใช้ Voucher นี้ใช่หรือไม่ ?</span><br />
-          <span>*Voucher นี้ไม่สามารถคืน หรือแลกเปลี่ยนเป็นเงินสด บัตรกำนัล หรือผลิตภัณฑ์อื่นได้</span>
+          <span class="mb-2">*Voucher นี้ไม่สามารถคืน หรือแลกเปลี่ยนเป็นเงินสด บัตรกำนัล หรือผลิตภัณฑ์อื่นได้</span>
+          <b-field
+            v-if="isBarCodeRequired"
+            label="Barcode"
+            horizontal
+          >
+            <b-input v-model="barcode"></b-input>
+          </b-field>
         </div>
       </div>
-      <footer class="card-footer">
-        <a @click="closeConfirm" class="card-footer-item cancel">Cancel</a>
-        <a @click="markUse" class="card-footer-item confirm has-text-weight-bold">Confirm</a>
+      <footer class="modal-card-foot">
+        <b-button @click="closeConfirm">Cancel</b-button>
+        <b-button @click="markUse" type="is-primary" :disabled="!isValid" :loading="isLoading">Confirm</b-button>
       </footer>
     </div>
   </b-modal>
 </template>
 
 <script>
-import { useLoadingStore } from '../../stores/loading'
 import { useMemberStore } from '../../stores/member'
 import { useUserStore } from '../../stores/user'
 import { usePrivilegeStore } from '../../stores/privilege'
@@ -59,14 +65,37 @@ export default {
     privilege: {
       type: Object,
       default: () => null,
-    }
+    },
+    isBarCodeRequired: {
+      type: Boolean,
+      default: false,
+    },
+    campaignName: {
+      type: String,
+      default: ''
+    },
+    campaignType: {
+      type: String,
+      default: ''
+    },
   },
   data() {
     return {
       isCardModalActive: false,
+      barcode: '',
+      isLoading: false
     }
   },
   computed: {
+    isValid() {
+      if (!this.isBarCodeRequired) {
+        return true
+      }
+      if (!this.barcode) {
+        return false
+      }
+      return true
+    },
     usedStoreCode() {
       if (this.privilege?.voucher?.Used_Store?.name) {
         return this.privilege?.voucher?.Used_Store?.name.split('-')[0]
@@ -103,6 +132,9 @@ export default {
       window.history.back()
     },
     openConfirm() {
+      if (this.isLoading) {
+        return
+      }
       if (this.privilege.isUsed) {
         this.$buefy.snackbar.open({
           duration: 3000,
@@ -135,12 +167,11 @@ export default {
     },
     async markUse() {
       this.closeConfirm()
-      const loading = useLoadingStore()
       const memberStore = useMemberStore()
       const userStore = useUserStore()
       const privilegeStore = usePrivilegeStore()
       try {
-        loading.setLoading(true)
+        this.isLoading = true
         const storeName = userStore.data?.User_Store1 || userStore.data?.User_Store
         const responseStore = await window.ZOHO.CRM.API.searchRecord({
           Entity: 'Vendors',
@@ -163,29 +194,38 @@ export default {
               Voucher_Code: this.privilege.Voucher_Code,
               Standard_Privilege: this.privilege.id,
               Generate_From: import.meta.env.VITE_CAMPAIGN_NAME,
+              Voucher_Status: 'Used',
+              Note: this.barcode
             }
           })
           if (responseVoucher?.data[0]?.code === 'SUCCESS') {
-            sessionStorage.setItem('latest-mark-use-member', JSON.stringify({
-              Standard_Privilege: {
-                id: this.privilege.id,
-              },
-              memberId: memberStore.data.id,
+            const tempMarkUsedString = sessionStorage.getItem('latest-mark-use-member')
+            const tempMarkUsedJson = tempMarkUsedString ? JSON.parse(tempMarkUsedString) : []
+            sessionStorage.setItem('latest-mark-use-member', JSON.stringify([
+              ...tempMarkUsedJson,
+              {
+                name: this.campaignName,
+                Privilege_Title: this.privilege.Privilege_Title,
+                Standard_Privilege: {
+                  id: this.privilege.id,
+                },
+                memberId: memberStore.data.id,
+                Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
+                Marked_Used_By: userStore.data?.full_name,
+                Voucher_Status: 'Used',
+                Used_Store: {
+                  name: store?.Store_Name,
+                },
+              }
+            ]))
+            privilegeStore.setUsedPrivilegeLocal(this.privilege.Privilege_Title, {
               Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
               Marked_Used_By: userStore.data?.full_name,
               Voucher_Status: 'Used',
               Used_Store: {
                 name: store?.Store_Name,
               },
-            }))
-            privilegeStore.setUsedPrivilegeLocal(this.privilege.id, {
-              Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
-              Marked_Used_By: userStore.data?.full_name,
-              Voucher_Status: 'Used',
-              Used_Store: {
-                name: store?.Store_Name,
-              },
-            })
+            }, this.campaignType === 'multiple')
               this.$buefy.snackbar.open({
                 duration: 3000,
                 message: 'Successfully mark use.',
@@ -199,14 +239,15 @@ export default {
         }
         else {
           this.$buefy.snackbar.open({
-          message: 'This user is not permitted to perform action as User is not assigned to any Store. Please contact Admin.',
-          position: 'is-top',
-          type: 'is-warning',
-        })
+            message: 'This user is not permitted to perform action as User is not assigned to any Store. Please contact Admin.',
+            position: 'is-top',
+            type: 'is-warning',
+          })
         }
-        loading.setLoading(false)
+        this.isLoading = false
       }
       catch (err) {
+        console.log(err)
         this.$buefy.snackbar.open({
           message: `Something wrong ! please capture screen or click "Copy" button and contact admin.<br/><br/>${JSON.stringify(err)}`,
           position: 'is-top',
@@ -216,7 +257,7 @@ export default {
             navigator.clipboard.writeText(JSON.stringify(err))
           }
         })
-        loading.setLoading(false)
+        this.isLoading = false
       }
     }
   }

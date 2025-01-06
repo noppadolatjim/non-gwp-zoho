@@ -6,12 +6,32 @@
   <div class="container">
     <Loading v-if="isLoading" />
     <span class="is-size-5 mb-3 is-clickable mr-auto" @click="goBack">&lt; <span class="is-underlined">Back</span></span>
-    <MembershipDetailCard
+    <div
       v-if="user && !isLoading"
-      :name="user?.Full_Name"
-      :member-no="user?.JT_Membership_No"
-      :tier="user?.Current_Tier"
-    />
+    >
+      <MembershipDetailCard
+        :name="user?.Full_Name"
+        :member-no="user?.JT_Membership_No"
+        :tier="user?.Current_Tier"
+      />
+      <div class="button-wrapper" v-if="!selectedPrivilege">
+        <div
+          v-for="(campaign, index) in campaigns"
+          :key="index"
+          class="gift-btn"
+          @click="selectPrivilege(campaign)"
+        >
+          <img :src="`./images/${campaign.value}.jpg`" :alt="campaign.value">
+          <span>
+            {{ campaign.name }}
+          </span>
+        </div>
+      </div>
+      <PrivilegeSection
+        :privilege-name="selectedPrivilege"
+        v-if="selectedPrivilege"
+      />
+    </div>
     <div
       class="no-member"
       v-else-if="!user && !isLoading"
@@ -22,16 +42,17 @@
 </template>
 <script>
 import MembershipDetailCard from './components/MembershipDetailCard.vue'
+import PrivilegeSection from './components/PrivilegeSection.vue'
 import Loading from './components/Loading.vue'
 
 import { useLoadingStore } from './stores/loading'
 import { useMemberStore } from './stores/member'
 import { useUserStore } from './stores/user'
-import { usePrivilegeStore } from './stores/privilege'
 
 export default {
   components: {
     MembershipDetailCard,
+    PrivilegeSection,
     Loading,
   },
   props: {
@@ -44,12 +65,16 @@ export default {
       privileges: [],
       voucher: [],
       isSomeUsed: false,
+      selectedPrivilege: ''
     };
   },
   computed: {
     isLoading() {
       const loading = useLoadingStore()
       return loading.isLoading
+    },
+    campaigns() {
+      return JSON.parse(import.meta.env.VITE_CAMPAIGNS)
     },
   },
   async mounted() {
@@ -72,7 +97,6 @@ export default {
         this.user = userResponse.data[0]
         memberStore.setData(userResponse.data[0])
       }
-      await this.fetchData()
       loading.setLoading(false)
     } catch (err) {
       console.debug(err);
@@ -80,80 +104,16 @@ export default {
     }
   },
   methods: {
+    selectPrivilege(campaign) {
+      this.selectedPrivilege = campaign.name
+    },
     goBack() {
-      window.history.back()
-    },
-    async fetchData() {
-      const privilegeStore = usePrivilegeStore()
-      const today = new Date()
-      const privileges = await window.ZOHO.CRM.API.searchRecord({
-        Entity: 'Standard_Privilege',
-        Type: 'criteria',
-        Query: '((Privilege_Title:starts_with:Gift Set)and(Status:equals:Inactive))',
-      })
-      if (privileges?.data) {
-        const voucher = await this.getInvolveVoucher()
-        const usedPrivilegeId = voucher?.Standard_Privilege?.id
-        const privilegeMaps = privileges?.data
-          .filter(privilege => {
-            const startDate = new Date(privilege.Start_Date)
-            const endDate = new Date(privilege.End_Date).setHours(23, 59, 59, 999)
-            return startDate <= today && today <= endDate
-          })
-          .map(p => {
-            if (usedPrivilegeId === p.id) {
-              return {
-                ...p,
-                isUsed: true,
-                voucher: voucher
-              }
-            }
-            return {
-              ...p,
-              isUsed: false,
-            }
-          })
-        const isSomeUsed = privilegeMaps.some(p => p.isUsed)
-        if (isSomeUsed) {
-          this.isSomeUsed = isSomeUsed
-          privilegeStore.setData(privilegeMaps.map(p => {
-            if (p.isUsed) {
-              return {
-                ...p,
-                isHidden: false,
-              }
-            }
-            return {
-                ...p,
-                isHidden: true,
-              }
-          }).filter(p => !p.isHidden))
-        }
-        else {
-          privilegeStore.setData(privilegeMaps)
-        }
+      if (this.selectedPrivilege) {
+        this.selectedPrivilege = ''
       }
-    },
-    async getInvolveVoucher() {
-      const memberStore = useMemberStore()
-      const tempMarkUsedString = sessionStorage.getItem('latest-mark-use-member')
-      if (tempMarkUsedString) {
-        const tempMarkUsedJson = JSON.parse(tempMarkUsedString)
-        if (tempMarkUsedJson.memberId === memberStore.data.id) {
-          return tempMarkUsedJson
-        }
+      else {
+        window.history.back()
       }
-      const responseVoucher = await window.ZOHO.CRM.API.searchRecord({
-        Entity: 'Voucher',
-        Type: 'criteria',
-        Query: `((Name:starts_with:Gift Set)and(Contact_Name:equals:${memberStore.data.id})and(Voucher_Status:equals:Used))`
-      })
-      
-      if (Array.isArray(responseVoucher?.data)) {
-        return responseVoucher?.data[0]
-      }
-
-      return null
     },
   }
 };
@@ -169,5 +129,42 @@ export default {
 .container {
   display: flex;
   flex-direction: column;
+}
+
+.button-wrapper {
+  display: flex;
+  padding: 24px;
+  gap: 24px;
+  justify-content: center;
+  align-items: center;
+}
+
+.gift-btn {
+  background-color: #FFFFFF;
+  min-height: 100px;
+  min-width: 300px;
+  border: 2px solid #E88625;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all .3s ease;
+  outline: none;
+  font-size: 16px;
+  font-weight: bold;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gift-btn > img {
+  width: 300px;
+  height: 200px;
+}
+.gift-btn > span {
+  margin: 8px;
+}
+
+.gift-btn:hover {
+  background-color: #E88625;
 }
 </style>

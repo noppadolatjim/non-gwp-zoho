@@ -1,14 +1,17 @@
 import { defineStore } from 'pinia'
 
 export const usePrivilegeStore = defineStore('privilege', {
-  state: () => ({ data: [] }),
+  state: () => ({
+    data: {},
+    selectedPriviledge: ''
+  }),
   actions: {
     setData(data) {
       this.data = data
     },
-    setUsedPrivilegeLocal(id, voucher) {
+    setUsedPrivilegeLocal(name, voucher, notHide = false) {
       this.data = this.data.map(p => {
-        if (p.id === id) {
+        if (p.Privilege_Title === name) {
             return {
               ...p,
               isUsed: true,
@@ -18,7 +21,7 @@ export const usePrivilegeStore = defineStore('privilege', {
         }
         return {
           ...p,
-          isHidden: true,
+          isHidden: !notHide,
         }
       }).filter(p => !p.isHidden)
     }

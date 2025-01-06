@@ -17,44 +17,16 @@
           <div class="column pa-1">
             Name: <span class="has-text-weight-bold">{{ name }}</span>
           </div>
-          <div class="column pa-1">
-            Date: <span class="has-text-weight-bold">{{ displayStartDate }} - {{ displayEndDate }}</span>
-          </div>
         </div>
-        <div class="columns" v-if="privileges.length > 0">
-          <div class="column pa-1">
-            <p>Privileges <span class="warning is-size-7">(Voucher นี้ไม่สามารถคืน หรือแลกเปลี่ยนเป็นเงินสด บัตรกำนัล หรือผลิตภัณฑ์อื่นได้)</span></p>
-            <div
-              v-if="privileges.length > 0"
-              class="column card-container"
-            >
-              <PrivilegeCard
-                v-for="(privilege, index) in privileges"
-                :key="index"
-                :privilege="privilege"
-              />
-            </div>
-          </div>
-        </div>
-        <div
-          class="no-privileges"
-          v-else
-        >
-          <p>No available privilege.</p>
-        </div>
+       
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { usePrivilegeStore } from '../stores/privilege'
 
-import PrivilegeCard from './units/PrivilegeCard.vue'
 export default {
-  components: {
-    PrivilegeCard,
-  },
   props: {
     memberNo: {
       type: String,
@@ -71,15 +43,9 @@ export default {
   },
   data() {
     return {
-      startDate: new Date(import.meta.env.VITE_START_DATE),
-      endDate: new Date(import.meta.env.VITE_END_DATE),
     }
   },
   computed: {
-    privileges() {
-      const privilegeStore = usePrivilegeStore()
-      return privilegeStore.data
-    },
     displayStartDate() {
       return this.getFormattedDate(this.startDate)
     },
@@ -97,7 +63,7 @@ export default {
         default:
           return '#ffd6bc'
       }
-    }
+    },
   },
   methods: {
     getFormattedDate(date) {
