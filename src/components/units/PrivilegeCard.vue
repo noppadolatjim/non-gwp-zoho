@@ -193,7 +193,7 @@ export default {
               Sub_Type: 'Special Gift',
               Voucher_Code: this.privilege.Voucher_Code,
               Standard_Privilege: this.privilege.id,
-              Generate_From: import.meta.env.VITE_CAMPAIGN_NAME,
+              Generate_From: 'Gift_Set',
               Voucher_Status: 'Used',
               Note: this.barcode
             }

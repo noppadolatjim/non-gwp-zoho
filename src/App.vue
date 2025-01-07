@@ -166,5 +166,6 @@ export default {
 
 .gift-btn:hover {
   background-color: #E88625;
+  color: #FFFFFF;
 }
 </style>
