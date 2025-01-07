@@ -194,7 +194,7 @@ export default {
               Voucher_Code: this.privilege.Voucher_Code,
               Standard_Privilege: this.privilege.id,
               Generate_From: 'Gift_Set',
-              Voucher_Status: 'Used',
+              Voucher_Status: '',
               Note: this.barcode
             }
           })
