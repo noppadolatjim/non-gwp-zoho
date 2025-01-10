@@ -2,6 +2,7 @@
   <div class="card mt-2">
     <div class="column pa-1">
       <p>Privileges <span class="warning is-size-7">(Voucher นี้ไม่สามารถคืน หรือแลกเปลี่ยนเป็นเงินสด บัตรกำนัล หรือผลิตภัณฑ์อื่นได้)</span></p>
+      <b-button v-if="campaign.value.type === 'multiple' && privileges.length > 0" @click="openConfirm(privileges)">Mark All</b-button>
       <div
         v-if="privileges.length > 0"
         class="column card-container"
@@ -13,6 +14,9 @@
           :campaignType="campaign.type"
           :isBarCodeRequired="campaign.isBarCodeRequired"
           :campaignName="campaign.name"
+          @openConfirm="openConfirm"
+          @markUse="markUse"
+          @closeConfirm="closeConfirm"
         />
       </div>
       <div
@@ -29,6 +33,30 @@
       </div>
     </div>
   </div>
+  <b-modal v-model="selectedPrivileges" :width="640" scroll="keep">
+    <div class="card">
+      <div class="card-header">
+        <p class="card-header-title is-justify-content-center">Confirm to Mark Use ?</p>
+      </div>
+      <div class="card-content">
+        <div class="content has-text-centered is-flex is-flex-direction-column">
+          <span class="has-text-weight-bold">ยืนยันการใช้ Voucher นี้ใช่หรือไม่ ?</span><br />
+          <span class="mb-2">*Voucher นี้ไม่สามารถคืน หรือแลกเปลี่ยนเป็นเงินสด บัตรกำนัล หรือผลิตภัณฑ์อื่นได้</span>
+          <b-field
+            v-if="isBarCodeRequired"
+            label="Barcode"
+            horizontal
+          >
+            <b-input v-model="barcode"></b-input>
+          </b-field>
+        </div>
+      </div>
+      <footer class="modal-card-foot">
+        <b-button @click="closeConfirm">Cancel</b-button>
+        <b-button @click="markUse" type="is-primary" :disabled="!isValid" :loading="isLoading">Confirm</b-button>
+      </footer>
+    </div>
+  </b-modal>
 </template>
 
 <script setup>
@@ -36,6 +64,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import { useMemberStore } from '../stores/member'
 import { usePrivilegeStore } from '../stores/privilege'
+import { useUserStore } from '../stores/user'
 
 import PrivilegeCard from './units/PrivilegeCard.vue'
 
@@ -55,6 +84,8 @@ const privilegeStore = usePrivilegeStore()
 const privileges = computed(() => privilegeStore.data)
 
 const isLoading = ref(false)
+
+const selectedPrivileges = ref(null)
 
 const campaigns = computed(() => {
   return JSON.parse(import.meta.env.VITE_CAMPAIGNS)
@@ -164,6 +195,126 @@ const getInvolveVoucher = async () => {
   }
 
   return null
+}
+
+const markUse = async () => {
+  const memberStore = useMemberStore()
+  const userStore = useUserStore()
+  const privilegeStore = usePrivilegeStore()
+  try {
+    isLoading.value = true
+    const storeName = userStore.data?.User_Store1 || userStore.data?.User_Store
+    const responseStore = await window.ZOHO.CRM.API.searchRecord({
+      Entity: 'Vendors',
+      Type: 'criteria',
+      Query: `Vendor_Name:equals:${storeName}`
+    })
+    const store = responseStore?.data[0]
+    if (Array.isArray(responseStore?.data)) {
+      for (const selectedPrivilege of selectedPrivileges.value) {
+        const responseVoucher = await window.ZOHO.CRM.API.insertRecord({
+          Entity: 'Voucher',
+          APIData: {
+            Contact_Name: memberStore.data.id,
+            Privilege_Sub_Title: memberStore.data.id,
+            Name: `${selectedPrivilege.Name}`,
+            Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
+            Used_Store: store.id,
+            Marked_Used_By: userStore.data?.full_name,
+            Type_of_Privilege: 'Gift',
+            Sub_Type: 'Special Gift',
+            Voucher_Code: selectedPrivilege.Voucher_Code,
+            Standard_Privilege: selectedPrivilege.id,
+            Generate_From: 'Gift_Set',
+            Voucher_Status: '',
+            Note: this.barcode
+          }
+        })
+        if (responseVoucher?.data[0]?.code === 'SUCCESS') {
+          const tempMarkUsedString = sessionStorage.getItem('latest-mark-use-member')
+          const tempMarkUsedJson = tempMarkUsedString ? JSON.parse(tempMarkUsedString) : []
+          sessionStorage.setItem('latest-mark-use-member', JSON.stringify([
+            ...tempMarkUsedJson,
+            {
+              name: this.campaignName,
+              Privilege_Title: selectedPrivilege.Privilege_Title,
+              Standard_Privilege: {
+                id: selectedPrivilege.id,
+              },
+              memberId: memberStore.data.id,
+              Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
+              Marked_Used_By: userStore.data?.full_name,
+              Voucher_Status: 'Used',
+              Used_Store: {
+                name: store?.Store_Name,
+              },
+            }
+          ]))
+          privilegeStore.setUsedPrivilegeLocal(selectedPrivilege.Privilege_Title, {
+            Used_Date_Time: this.formatDateToISOWithTimezone(new Date()),
+            Marked_Used_By: userStore.data?.full_name,
+            Voucher_Status: 'Used',
+            Used_Store: {
+              name: store?.Store_Name,
+            },
+          }, this.campaignType === 'multiple')
+        }
+      }
+      this.$buefy.snackbar.open({
+        duration: 3000,
+        message: 'Successfully mark use.',
+        position: 'is-top',
+        actionText: 'Go back',
+        onAction: () => {
+          this.goBack()
+        }
+      })
+    }
+    else {
+      this.$buefy.snackbar.open({
+        message: 'This user is not permitted to perform action as User is not assigned to any Store. Please contact Admin.',
+        position: 'is-top',
+        type: 'is-warning',
+      })
+    }
+    isLoading.value = false
+    this.closeConfirm()
+  }
+  catch (err) {
+    console.log(err)
+    this.$buefy.snackbar.open({
+      message: `Something wrong ! please capture screen or click "Copy" button and contact admin.<br/><br/>${JSON.stringify(err)}`,
+      position: 'is-top',
+      actionText: 'Copy',
+      type: 'is-warning',
+      onAction: () => {
+        navigator.clipboard.writeText(JSON.stringify(err))
+      }
+    })
+    isLoading.value = false
+  }
+}
+
+const openConfirm = (items) => {
+  if (isLoading.value) {
+    return
+  }
+  const unUsedItems = items.filter(item => !item.isUsed)
+  if (unUsedItems.length === 0) {
+    this.$buefy.snackbar.open({
+      duration: 3000,
+      message: 'Already used.',
+      position: 'is-top',
+      actionText: null,
+      type: 'is-warning'
+    })
+    return
+  }
+  selectedPrivileges.value = items
+}
+
+const closeConfirm = () => {
+  selectedPrivileges.value = null
 }
 
 </script>
