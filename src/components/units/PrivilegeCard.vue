@@ -48,10 +48,6 @@ export default {
       type: String,
       default: ''
     },
-    campaignType: {
-      type: String,
-      default: ''
-    },
   },
   data() {
     return {
@@ -61,15 +57,6 @@ export default {
     }
   },
   computed: {
-    isValid() {
-      if (!this.isBarCodeRequired) {
-        return true
-      }
-      if (!this.barcode) {
-        return false
-      }
-      return true
-    },
     usedStoreCode() {
       if (this.privilege?.voucher?.Used_Store?.name) {
         return this.privilege?.voucher?.Used_Store?.name.split('-')[0]
@@ -100,26 +87,6 @@ export default {
     previewImage() {
       return `${import.meta.env.VITE_IMAGE_BASE_URL}/EntityImageAttach.do?action_module=CustomModule17&entityId=${this.privilege.id}&actionName=readImage&fileId=${this.privilege.Record_Image}`
     }
-  },
-  methods: {
-    goBack() {
-      window.history.back()
-    },
-    formatDateToISOWithTimezone(date) {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      
-      const hours = String(date.getHours()).padStart(2, '0')
-      const minutes = String(date.getMinutes()).padStart(2, '0')
-      const seconds = String(date.getSeconds()).padStart(2, '0')
-      
-      const timezone = '+07:00'
-
-      const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${timezone}`
-      
-      return formattedDate
-    },
   }
 }
 </script>
