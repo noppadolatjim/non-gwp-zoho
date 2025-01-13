@@ -3,7 +3,7 @@
     <div class="flex-row">
       <div class="img-wrapper">
         <img
-          :src="previewImage"
+          :src="`./images/${privilege.Voucher_Code}.png`"
           alt="privilege image"
           class="privilege-img"
         />

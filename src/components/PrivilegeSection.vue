@@ -50,7 +50,7 @@
           <span class="mb-2">*Voucher นี้ไม่สามารถคืน หรือแลกเปลี่ยนเป็นเงินสด บัตรกำนัล หรือผลิตภัณฑ์อื่นได้</span>
           <b-field
             v-if="campaign.type === 'multiple'"
-            label="Barcode"
+            label="Receipt No."
             horizontal
           >
             <b-input v-model="barcode"></b-input>
@@ -305,7 +305,7 @@ const openConfirm = (items) => {
   if (unUsedItems.length === 0) {
     return
   }
-  selectedPrivileges.value = items
+  selectedPrivileges.value = unUsedItems
 }
 
 const closeConfirm = () => {
